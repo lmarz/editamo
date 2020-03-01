@@ -2,18 +2,18 @@
     <head>
         <meta charset="utf-8">
         <title>editamo</title>
-        <style>
-            #renderCanvas {
-                width: 100%;
-                height: 100%;
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="cds/style/static.css">
     </head>
     <body>
         <!-- Babylonjs stuff for rendering -->
         <script src="https://cdn.babylonjs.com/babylon.js"></script>
         <script src="https://cdn.babylonjs.com/loaders/babylon.glTFFileLoader.min.js"></script>
-        <canvas id="renderCanvas"></canvas>
+
+        <!-- DOM-Elements -->
+        <input id="file" type="file">
+        <canvas id="renderCanvas" class="flex-center"></canvas>
+
+        <!-- Rendering functionality -->
         <script>
             let canvas = document.getElementById("renderCanvas");
             let engine = new BABYLON.Engine(canvas, true);
@@ -28,6 +28,7 @@
                 }, undefined, (error) => {
                     console.log(error);
                 });
+                scene.activeCamera.alpha += Math.PI;
                 return scene;
             };
             let scene = createScene();
@@ -35,8 +36,13 @@
             engine.runRenderLoop(() => {
                 scene.render();
             });
+
             window.addEventListener("resize", () => {
                 engine.resize();
+            });
+
+            document.getElementById("file").addEventListener("change", (e) => {
+                console.log(e.target.files[0]);
             });
         </script>
     </body>
