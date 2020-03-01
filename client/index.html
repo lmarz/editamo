@@ -1,8 +1,43 @@
 <html>
     <head>
-        <title>gltf2amo</title>
+        <meta charset="utf-8">
+        <title>editamo</title>
+        <style>
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
     </head>
     <body>
-        Test
+        <!-- Babylonjs stuff for rendering -->
+        <script src="https://cdn.babylonjs.com/babylon.js"></script>
+        <script src="https://cdn.babylonjs.com/loaders/babylon.glTFFileLoader.min.js"></script>
+        <canvas id="renderCanvas"></canvas>
+        <script>
+            let canvas = document.getElementById("renderCanvas");
+            let engine = new BABYLON.Engine(canvas, true);
+
+            let createScene = () => {
+                let scene = new BABYLON.Scene(engine);
+                scene.createDefaultCameraOrLight(true, true, true);
+                let helper = scene.createDefaultEnvironment();
+                helper.setMainColor(new BABYLON.Color3(0.3, 0.3, 0.3))
+                BABYLON.SceneLoader.Append("cds/gltf/", "suzanne.gltf", scene, (scene) => {
+                    console.log("Success");
+                }, undefined, (error) => {
+                    console.log(error);
+                });
+                return scene;
+            };
+            let scene = createScene();
+
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+            window.addEventListener("resize", () => {
+                engine.resize();
+            });
+        </script>
     </body>
 </html>
