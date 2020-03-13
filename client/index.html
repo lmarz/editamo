@@ -18,20 +18,20 @@
             let canvas = document.getElementById("renderCanvas");
             let engine = new BABYLON.Engine(canvas, true);
 
-            let createScene = () => {
+            let createScene = (filename) => {
                 let scene = new BABYLON.Scene(engine);
                 scene.createDefaultCameraOrLight(true, true, true);
                 let helper = scene.createDefaultEnvironment();
                 helper.setMainColor(new BABYLON.Color3(0.3, 0.3, 0.3))
-                BABYLON.SceneLoader.Append("cds/gltf/", "suzanne.gltf", scene, (scene) => {
+                BABYLON.SceneLoader.Append("", filename, scene, (scene) => {
                     console.log("Success");
-                }, undefined, (error) => {
-                    console.log(error);
-                });
+                }, undefined, (scene, err) => {
+                    console.error(err);
+                }, ".gltf");
                 scene.activeCamera.alpha += Math.PI;
                 return scene;
             };
-            let scene = createScene();
+            let scene = createScene("cds/gltf/suzanne.gltf");
 
             engine.runRenderLoop(() => {
                 scene.render();
@@ -43,6 +43,13 @@
 
             document.getElementById("file").addEventListener("change", (e) => {
                 console.log(e.target.files[0]);
+                let filename = e.target.files[0].name
+                if(filename.split('.').pop() == "gltf") {
+                    console.log("yay");
+                    scene.dispose();
+                    let fileurl = URL.createObjectURL(e.target.files[0])
+                    scene = createScene(fileurl);
+                }
             });
         </script>
     </body>
