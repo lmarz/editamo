@@ -71,7 +71,7 @@
 
                 let reader = new FileReader();
                 reader.onload = (event) => {
-                    xhttp.send(event.target.result);
+                    // xhttp.send(event.target.result);
                     gltfModel = JSON.parse(event.target.result);
                     convert(gltfModel);
                 };

@@ -2,7 +2,7 @@ function convert(gltfModel) {
     let vertexBuffer = {};
     vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
     vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
-    vertexBuffer.vertexCount = gltfModel.accessors[vertexBuffer.accessor].count;
+    vertexBuffer.count = gltfModel.accessors[vertexBuffer.accessor].count;
     vertexBuffer.buffer = gltfModel.bufferViews[vertexBuffer.bufferView].buffer;
     vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
     vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
@@ -10,7 +10,7 @@ function convert(gltfModel) {
     let normalBuffer = {};
     normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
     normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
-    normalBuffer.normalCount = gltfModel.accessors[normalBuffer.accessor].count;
+    normalBuffer.count = gltfModel.accessors[normalBuffer.accessor].count;
     normalBuffer.buffer = gltfModel.bufferViews[normalBuffer.bufferView].buffer;
     normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
     normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
@@ -18,7 +18,7 @@ function convert(gltfModel) {
     let uvBuffer = {};
     uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
     uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
-    uvBuffer.uvCount = gltfModel.accessors[uvBuffer.accessor].count;
+    uvBuffer.count = gltfModel.accessors[uvBuffer.accessor].count;
     uvBuffer.buffer = gltfModel.bufferViews[uvBuffer.bufferView].buffer;
     uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
     uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
@@ -26,17 +26,105 @@ function convert(gltfModel) {
     let indexBuffer = {};
     indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
     indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
-    indexBuffer.indexCount = gltfModel.accessors[indexBuffer.accessor].count;
+    indexBuffer.count = gltfModel.accessors[indexBuffer.accessor].count;
     indexBuffer.buffer = gltfModel.bufferViews[indexBuffer.bufferView].buffer;
     indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
     indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
 
-    fetch(gltfModel.buffers[0].uri).then((res) => {
-        res.arrayBuffer().then((data) => {
-            vertexBuffer.data = new Float32Array(data.slice(vertexBuffer.start, vertexBuffer.stop));
-            normalBuffer.data = new Float32Array(data.slice(normalBuffer.start, normalBuffer.stop));
-            uvBuffer.data = new Float32Array(data.slice(uvBuffer.start, uvBuffer.stop));
-            indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
+    let jointBuffer = {};
+    let weightBuffer = {};
+    if(gltfModel.animations != undefined) {
+        jointBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.JOINTS_0;
+        jointBuffer.bufferView = gltfModel.accessors[jointBuffer.accessor].bufferView;
+        jointBuffer.count = gltfModel.accessors[jointBuffer.accessor].count;
+        jointBuffer.buffer = gltfModel.bufferViews[jointBuffer.bufferView].buffer;
+        jointBuffer.start = gltfModel.bufferViews[jointBuffer.bufferView].byteOffset;
+        jointBuffer.stop = jointBuffer.start + gltfModel.bufferViews[jointBuffer.bufferView].byteLength;
+
+        weightBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.WEIGHTS_0;
+        weightBuffer.bufferView = gltfModel.accessors[weightBuffer.accessor].bufferView;
+        weightBuffer.count = gltfModel.accessors[weightBuffer.accessor].count;
+        weightBuffer.buffer = gltfModel.bufferViews[weightBuffer.bufferView].buffer;
+        weightBuffer.start = gltfModel.bufferViews[weightBuffer.bufferView].byteOffset;
+        weightBuffer.stop = weightBuffer.start + gltfModel.bufferViews[weightBuffer.bufferView].byteLength;
+    }
+
+    for(let i = 0; i < gltfModel.buffers.length; i++) {
+        fetch(gltfModel.buffers[i].uri).then((res) => {
+            res.arrayBuffer().then((data) => {
+                if(vertexBuffer.buffer == i) {
+                    vertexBuffer.data = new Float32Array(data.slice(vertexBuffer.start, vertexBuffer.stop));
+                }
+                if(normalBuffer.buffer == i) {
+                    normalBuffer.data = new Float32Array(data.slice(normalBuffer.start, normalBuffer.stop));
+                }
+                if(uvBuffer.buffer == i) {
+                    uvBuffer.data = new Float32Array(data.slice(uvBuffer.start, uvBuffer.stop));
+                }
+                if(indexBuffer.buffer == i) {
+                    indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
+                }
+                if(jointBuffer.buffer == i) {
+                    if(gltfModel.accessors[jointBuffer.accessor].componentType == 5121) {
+                        jointBuffer.data = new Uint8Array(data.slice(jointBuffer.start, jointBuffer.stop));
+                    } else {
+                        jointBuffer.data = new Uint16Array(data.slice(jointBuffer.start, jointBuffer.stop));
+                    }
+                }
+                if(weightBuffer.buffer == i) {
+                    weightBuffer.data = new Float32Array(data.slice(weightBuffer.start, weightBuffer.stop));
+                }
+            });
         });
-    });
+    }
 };
+
+function createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer) {
+    let OBJ = "#Generated by editamo\n";
+    OBJ += `o ${gltfModel.meshes[0].name}\n\n`;
+    for(let i = 0; i < vertexBuffer.count; i++) {
+        OBJ += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
+    }
+    OBJ += "\n";
+    for(let i = 0; i < normalBuffer.count; i++) {
+        OBJ += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
+    }
+    OBJ += "\n";
+    for(let i = 0; i < uvBuffer.count; i++) {
+        OBJ += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
+    }
+    OBJ += "\n";
+    for(let i = 0; i < indexBuffer.count/3; i++) {
+        OBJ += `f ${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]} ${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]} ${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}\n`;
+    }
+    return OBJ;
+}
+
+function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer) {
+    let AMO = "#Generated by editamo\n";
+    AMO += `ao ${gltfModel.meshes[0].name}\n\n`;
+    for(let i = 0; i < vertexBuffer.count; i++) {
+        AMO += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
+    }
+    AMO += "\n";
+    for(let i = 0; i < normalBuffer.count; i++) {
+        AMO += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
+    }
+    AMO += "\n";
+    for(let i = 0; i < uvBuffer.count; i++) {
+        AMO += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
+    }
+    AMO += "\n";
+    for(let i = 0; i < jointBuffer.count; i++) {
+        AMO += `vj ${jointBuffer.data[i*4]} ${jointBuffer.data[i*4+1]} ${jointBuffer.data[i*4+2]} ${jointBuffer.data[i*4+3]}\n`;
+    }
+    AMO += "\n";
+    for(let i = 0; i < weightBuffer.count; i++) {
+        AMO += `vw ${weightBuffer.data[i*4]} ${weightBuffer.data[i*4+1]} ${weightBuffer.data[i*4+2]} ${weightBuffer.data[i*4+3]}\n`;
+    }
+    AMO += "\n";
+    for(let i = 0; i < indexBuffer.count/3; i++) {
+        AMO += `f ${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]}/${indexBuffer.data[i*3]} ${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]}/${indexBuffer.data[i*3+1]} ${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}/${indexBuffer.data[i*3+2]}\n`;
+    }
+    return AMO;
+}
