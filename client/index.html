@@ -18,13 +18,14 @@
             let canvas = document.getElementById("renderCanvas");
             let engine = new BABYLON.Engine(canvas, true);
 
+            /* A function that loads a model into the scene */
             let createScene = (filename) => {
                 let scene = new BABYLON.Scene(engine);
                 scene.createDefaultCameraOrLight(true, true, true);
                 let helper = scene.createDefaultEnvironment();
                 helper.setMainColor(new BABYLON.Color3(0.3, 0.3, 0.3))
                 BABYLON.SceneLoader.Append("", filename, scene, (scene) => {
-                    console.log("Success");
+                    console.log("Ready");
                 }, undefined, (scene, err) => {
                     console.error(err);
                 }, ".gltf");
@@ -33,24 +34,45 @@
             };
             let scene = createScene("cds/gltf/suzanne.gltf");
 
+            /* Render Loop */
             engine.runRenderLoop(() => {
                 scene.render();
             });
 
+            /* Resize Event */
             window.addEventListener("resize", () => {
                 engine.resize();
             });
 
+            /* Load a custom file */
             document.getElementById("file").addEventListener("change", (e) => {
                 console.log(e.target.files[0]);
                 let filename = e.target.files[0].name
                 if(filename.split('.').pop() == "gltf") {
-                    console.log("yay");
+                    console.log(`Loading new model ${filename}`);
                     scene.dispose();
                     let fileurl = URL.createObjectURL(e.target.files[0])
                     scene = createScene(fileurl);
+                    uploadModel(e.target.files[0]);
                 }
             });
+
+            /* A function, that uploads the file to the server */
+            let uploadModel = (file) => {
+                let xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = () => {
+                    if(xhttp.readyState === xhttp.DONE && xhttp.status === 200) {
+                        console.log("Upload complete");
+                    }
+                };
+                xhttp.open("POST", "upload", true);
+
+                let reader = new FileReader();
+                reader.onload = (event) => {
+                    xhttp.send(event.target.result);
+                };
+                reader.readAsText(file);
+            };
         </script>
     </body>
 </html>
