@@ -14,6 +14,7 @@
         <canvas id="renderCanvas" class="flex-center"></canvas>
 
         <!-- Rendering functionality -->
+        <script src="cds/js/convert.js"></script>
         <script>
             let canvas = document.getElementById("renderCanvas");
             let engine = new BABYLON.Engine(canvas, true);
@@ -46,16 +47,17 @@
 
             /* Load a custom file */
             document.getElementById("file").addEventListener("change", (e) => {
-                console.log(e.target.files[0]);
                 let filename = e.target.files[0].name
                 if(filename.split('.').pop() == "gltf") {
                     console.log(`Loading new model ${filename}`);
                     scene.dispose();
-                    let fileurl = URL.createObjectURL(e.target.files[0])
+                    let fileurl = URL.createObjectURL(e.target.files[0]);
                     scene = createScene(fileurl);
                     uploadModel(e.target.files[0]);
                 }
             });
+
+            let gltfModel = undefined;
 
             /* A function, that uploads the file to the server */
             let uploadModel = (file) => {
@@ -70,6 +72,8 @@
                 let reader = new FileReader();
                 reader.onload = (event) => {
                     xhttp.send(event.target.result);
+                    gltfModel = JSON.parse(event.target.result);
+                    convert(gltfModel);
                 };
                 reader.readAsText(file);
             };
