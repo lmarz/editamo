@@ -1,4 +1,66 @@
 function convert(gltfModel) {
+    if(gltfModel.animations == undefined) {
+        loadForOBJ(gltfModel);
+    } else {
+        loadForAMO(gltfModel);
+    }
+};
+
+function loadForOBJ(gltfModel) {
+    let vertexBuffer = {};
+    vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
+    vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
+    vertexBuffer.count = gltfModel.accessors[vertexBuffer.accessor].count;
+    vertexBuffer.buffer = gltfModel.bufferViews[vertexBuffer.bufferView].buffer;
+    vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
+    vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
+
+    let normalBuffer = {};
+    normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
+    normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
+    normalBuffer.count = gltfModel.accessors[normalBuffer.accessor].count;
+    normalBuffer.buffer = gltfModel.bufferViews[normalBuffer.bufferView].buffer;
+    normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
+    normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
+
+    let uvBuffer = {};
+    uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
+    uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
+    uvBuffer.count = gltfModel.accessors[uvBuffer.accessor].count;
+    uvBuffer.buffer = gltfModel.bufferViews[uvBuffer.bufferView].buffer;
+    uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
+    uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
+
+    let indexBuffer = {};
+    indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
+    indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
+    indexBuffer.count = gltfModel.accessors[indexBuffer.accessor].count;
+    indexBuffer.buffer = gltfModel.bufferViews[indexBuffer.bufferView].buffer;
+    indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
+    indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
+
+    for(let i = 0; i < gltfModel.buffers.length; i++) {
+        fetch(gltfModel.buffers[i].uri).then((res) => {
+            res.arrayBuffer().then((data) => {
+                if(vertexBuffer.buffer == i) {
+                    vertexBuffer.data = new Float32Array(data.slice(vertexBuffer.start, vertexBuffer.stop));
+                }
+                if(normalBuffer.buffer == i) {
+                    normalBuffer.data = new Float32Array(data.slice(normalBuffer.start, normalBuffer.stop));
+                }
+                if(uvBuffer.buffer == i) {
+                    uvBuffer.data = new Float32Array(data.slice(uvBuffer.start, uvBuffer.stop));
+                }
+                if(indexBuffer.buffer == i) {
+                    indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
+                }
+                console.log(createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer));
+            });
+        });
+    }
+}
+
+function loadForAMO(gltfModel) {
     let vertexBuffer = {};
     vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
     vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
@@ -32,22 +94,20 @@ function convert(gltfModel) {
     indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
 
     let jointBuffer = {};
-    let weightBuffer = {};
-    if(gltfModel.animations != undefined) {
-        jointBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.JOINTS_0;
-        jointBuffer.bufferView = gltfModel.accessors[jointBuffer.accessor].bufferView;
-        jointBuffer.count = gltfModel.accessors[jointBuffer.accessor].count;
-        jointBuffer.buffer = gltfModel.bufferViews[jointBuffer.bufferView].buffer;
-        jointBuffer.start = gltfModel.bufferViews[jointBuffer.bufferView].byteOffset;
-        jointBuffer.stop = jointBuffer.start + gltfModel.bufferViews[jointBuffer.bufferView].byteLength;
+    jointBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.JOINTS_0;
+    jointBuffer.bufferView = gltfModel.accessors[jointBuffer.accessor].bufferView;
+    jointBuffer.count = gltfModel.accessors[jointBuffer.accessor].count;
+    jointBuffer.buffer = gltfModel.bufferViews[jointBuffer.bufferView].buffer;
+    jointBuffer.start = gltfModel.bufferViews[jointBuffer.bufferView].byteOffset;
+    jointBuffer.stop = jointBuffer.start + gltfModel.bufferViews[jointBuffer.bufferView].byteLength;
 
-        weightBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.WEIGHTS_0;
-        weightBuffer.bufferView = gltfModel.accessors[weightBuffer.accessor].bufferView;
-        weightBuffer.count = gltfModel.accessors[weightBuffer.accessor].count;
-        weightBuffer.buffer = gltfModel.bufferViews[weightBuffer.bufferView].buffer;
-        weightBuffer.start = gltfModel.bufferViews[weightBuffer.bufferView].byteOffset;
-        weightBuffer.stop = weightBuffer.start + gltfModel.bufferViews[weightBuffer.bufferView].byteLength;
-    }
+    let weightBuffer = {};
+    weightBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.WEIGHTS_0;
+    weightBuffer.bufferView = gltfModel.accessors[weightBuffer.accessor].bufferView;
+    weightBuffer.count = gltfModel.accessors[weightBuffer.accessor].count;
+    weightBuffer.buffer = gltfModel.bufferViews[weightBuffer.bufferView].buffer;
+    weightBuffer.start = gltfModel.bufferViews[weightBuffer.bufferView].byteOffset;
+    weightBuffer.stop = weightBuffer.start + gltfModel.bufferViews[weightBuffer.bufferView].byteLength;
 
     for(let i = 0; i < gltfModel.buffers.length; i++) {
         fetch(gltfModel.buffers[i].uri).then((res) => {
@@ -74,11 +134,11 @@ function convert(gltfModel) {
                 if(weightBuffer.buffer == i) {
                     weightBuffer.data = new Float32Array(data.slice(weightBuffer.start, weightBuffer.stop));
                 }
-                console.log(createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer));
+                console.log(createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer));
             });
         });
     }
-};
+}
 
 function createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer) {
     let OBJ = "#Generated by editamo\n";
@@ -131,5 +191,7 @@ function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer,
         AMO += `${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1} `
         AMO += `${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}\n`;
     }
+    AMO += "\n";
+    AMO += `a ${gltfModel.animations[0].name}\n\n`;
     return AMO;
 }
