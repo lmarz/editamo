@@ -1,3 +1,4 @@
+// Selects, which file format it should convert to
 function convert(gltfModel) {
     if(gltfModel.animations == undefined) {
         loadForOBJ(gltfModel);
@@ -6,7 +7,9 @@ function convert(gltfModel) {
     }
 };
 
+// Prepares to generate the standard OBJ format
 function loadForOBJ(gltfModel) {
+    // Vertexbuffer aka v
     let vertexBuffer = {};
     vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
     vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
@@ -15,6 +18,7 @@ function loadForOBJ(gltfModel) {
     vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
     vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
 
+    // Normalbuffer aka vn
     let normalBuffer = {};
     normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
     normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
@@ -23,6 +27,7 @@ function loadForOBJ(gltfModel) {
     normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
     normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
 
+    // UVbuffer aka vt
     let uvBuffer = {};
     uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
     uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
@@ -31,6 +36,7 @@ function loadForOBJ(gltfModel) {
     uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
     uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
 
+    // Indexbuffer aka f
     let indexBuffer = {};
     indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
     indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
@@ -39,6 +45,7 @@ function loadForOBJ(gltfModel) {
     indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
     indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
 
+    // Fetch every gltfbuffer and load the data for each buffer
     for(let i = 0; i < gltfModel.buffers.length; i++) {
         fetch(gltfModel.buffers[i].uri).then((res) => {
             res.arrayBuffer().then((data) => {
@@ -54,13 +61,15 @@ function loadForOBJ(gltfModel) {
                 if(indexBuffer.buffer == i) {
                     indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
                 }
-                console.log(createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer));
+                createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer);
             });
         });
     }
 }
 
+// Prepares to generate the Animated OBJ format
 function loadForAMO(gltfModel) {
+    // Vertexbuffer aka v
     let vertexBuffer = {};
     vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
     vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
@@ -69,6 +78,7 @@ function loadForAMO(gltfModel) {
     vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
     vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
 
+    // Normalbuffer aka vn
     let normalBuffer = {};
     normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
     normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
@@ -77,6 +87,7 @@ function loadForAMO(gltfModel) {
     normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
     normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
 
+    // UVbuffer aka vt
     let uvBuffer = {};
     uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
     uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
@@ -85,6 +96,7 @@ function loadForAMO(gltfModel) {
     uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
     uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
 
+    // Indexbuffer aka f
     let indexBuffer = {};
     indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
     indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
@@ -93,6 +105,7 @@ function loadForAMO(gltfModel) {
     indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
     indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
 
+    // Jointbuffer aka vj
     let jointBuffer = {};
     jointBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.JOINTS_0;
     jointBuffer.bufferView = gltfModel.accessors[jointBuffer.accessor].bufferView;
@@ -101,6 +114,7 @@ function loadForAMO(gltfModel) {
     jointBuffer.start = gltfModel.bufferViews[jointBuffer.bufferView].byteOffset;
     jointBuffer.stop = jointBuffer.start + gltfModel.bufferViews[jointBuffer.bufferView].byteLength;
 
+    // Weightbuffer aka vw
     let weightBuffer = {};
     weightBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.WEIGHTS_0;
     weightBuffer.bufferView = gltfModel.accessors[weightBuffer.accessor].bufferView;
@@ -109,9 +123,11 @@ function loadForAMO(gltfModel) {
     weightBuffer.start = gltfModel.bufferViews[weightBuffer.bufferView].byteOffset;
     weightBuffer.stop = weightBuffer.start + gltfModel.bufferViews[weightBuffer.bufferView].byteLength;
 
+    // THe animation object
     let animation = {};
     animation.name = gltfModel.animations[0].name;
     animation.joints = [];
+    // Load every joint and sleect their parents
     for(let i = 0; i < gltfModel.skins[0].joints.length; i++) {
         animation.joints[i] = {};
         animation.joints[i].index = gltfModel.skins[0].joints[i];
@@ -123,6 +139,7 @@ function loadForAMO(gltfModel) {
             }
         }
     }
+    // The animation samplers, which contains to buffers: the timestamps and the values the attribute should have at that timestamp
     animation.samplers = [];
     for(let i = 0; i < gltfModel.animations[0].samplers.length; i++) {
         animation.samplers[i] = {};
@@ -142,6 +159,7 @@ function loadForAMO(gltfModel) {
         animation.samplers[i].valueBuffer.start = gltfModel.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteOffset;
         animation.samplers[i].valueBuffer.stop = animation.samplers[i].valueBuffer.start + gltfModel.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteLength;
     }
+    // The animation channels. They determine, which attribute of which joint should be used for the sampler
     animation.channels = [];
     for(let i = 0; i < gltfModel.animations[0].channels.length; i++) {
         animation.channels[i] = {};
@@ -149,7 +167,8 @@ function loadForAMO(gltfModel) {
         animation.channels[i].sampler = gltfModel.animations[0].channels[i].sampler;
         animation.channels[i].path = gltfModel.animations[0].channels[i].target.path;
     }
-    console.log(animation);
+
+    // Fetch every gltfbuffer and load the data for each buffer
     for(let i = 0; i < gltfModel.buffers.length; i++) {
         fetch(gltfModel.buffers[i].uri).then((res) => {
             res.arrayBuffer().then((data) => {
@@ -185,64 +204,90 @@ function loadForAMO(gltfModel) {
                         }
                     }
                 }
-                console.log(createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer, animation));
+                createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer, animation);
             });
         });
     }
 }
 
+// Generate the standard OBJ file baesd on the buffers we previously determined
 function createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer) {
+    // Header
     let OBJ = "#Generated by editamo\n";
     OBJ += `o ${gltfModel.meshes[0].name}\n\n`;
+
+    // Vertexbuffer aka v
     for(let i = 0; i < vertexBuffer.count; i++) {
         OBJ += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
     }
     OBJ += "\n";
+
+    // Normalbuffer aka vn
     for(let i = 0; i < normalBuffer.count; i++) {
         OBJ += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
     }
     OBJ += "\n";
+
+    // UVbuffer aka vt
     for(let i = 0; i < uvBuffer.count; i++) {
         OBJ += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
     }
     OBJ += "\n";
+
+    // Indexbuffer aka f
     for(let i = 0; i < indexBuffer.count/3; i++) {
         OBJ += `f ${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1} `
         OBJ += `${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1} `
         OBJ += `${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}\n`;
     }
-    return OBJ;
+    saveFile(OBJ, gltfModel.meshes[0].name + ".obj");
 }
 
+// Generate the AMO file based on the buffers we  previously determined
 function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer, animation) {
+    // Header
     let AMO = "#Generated by editamo\n";
     AMO += `ao ${gltfModel.meshes[0].name}\n\n`;
+
+    // Vertexbuffer aka v
     for(let i = 0; i < vertexBuffer.count; i++) {
         AMO += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
     }
     AMO += "\n";
+
+    // Normalbuffer aka vn
     for(let i = 0; i < normalBuffer.count; i++) {
         AMO += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
     }
     AMO += "\n";
+
+    // UVbuffer aka vt
     for(let i = 0; i < uvBuffer.count; i++) {
         AMO += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
     }
     AMO += "\n";
+
+    // Jointbuffer aka vj
     for(let i = 0; i < jointBuffer.count; i++) {
         AMO += `vj ${jointBuffer.data[i*4]+1} ${jointBuffer.data[i*4+1]+1} ${jointBuffer.data[i*4+2]+1} ${jointBuffer.data[i*4+3]+1}\n`;
     }
     AMO += "\n";
+
+    // Weightbuffer aka vw
     for(let i = 0; i < weightBuffer.count; i++) {
         AMO += `vw ${weightBuffer.data[i*4]} ${weightBuffer.data[i*4+1]} ${weightBuffer.data[i*4+2]} ${weightBuffer.data[i*4+3]}\n`;
     }
     AMO += "\n";
+
+    // Indexbuffer aka f
     for(let i = 0; i < indexBuffer.count/3; i++) {
         AMO += `f ${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1} `
         AMO += `${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1} `
         AMO += `${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}\n`;
     }
     AMO += "\n";
+
+    // Joints aka j
     for(let i = 0; i < animation.joints.length; i++) {
         if(animation.joints[i].parent != undefined) {
             AMO += `j ${animation.joints[i].name} ${animation.joints[i].parent}\n`;
@@ -251,17 +296,32 @@ function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer,
         }
     }
     AMO += "\n";
+
+    // Animation
     AMO += `a ${animation.name}\n\n`;
     for(let i = 0; i < animation.channels.length; i++) {
         let sampler = animation.samplers[animation.channels[i].sampler];
         for(let j = 0; j < sampler.timeBuffer.count; j++) {
+            // Position aka ap
             if(animation.channels[i].path == "translation") {
                 AMO += `ap ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*3]} ${sampler.valueBuffer.data[j*3+1]} ${sampler.valueBuffer.data[j*3+2]}\n`;
+            // Rotation aka ar
             } else if(animation.channels[i].path == "rotation") {
                 AMO += `ar ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*4]} ${sampler.valueBuffer.data[j*4+1]} ${sampler.valueBuffer.data[j*4+2]} ${sampler.valueBuffer.data[j*4+3]}\n`;
             }
         }
     }
-    AMO += "\n";
-    return AMO;
+    saveFile(AMO, gltfModel.meshes[0].name + ".amo");
+}
+
+function saveFile(content, filename) {
+    let file = new Blob([content], {type: "text/plain"});
+    let a = document.createElement("a");
+    let url = URL.createObjectURL(file);
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+    }, 0);
 }

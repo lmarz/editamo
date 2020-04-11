@@ -20,7 +20,7 @@
             let engine = new BABYLON.Engine(canvas, true);
 
             /* A function that loads a model into the scene */
-            let createScene = (filename) => {
+            function createScene(filename) {
                 let scene = new BABYLON.Scene(engine);
                 scene.createDefaultCameraOrLight(true, true, true);
                 let helper = scene.createDefaultEnvironment();
@@ -32,7 +32,8 @@
                 }, ".gltf");
                 scene.activeCamera.alpha += Math.PI;
                 return scene;
-            };
+            }
+
             let scene = createScene("cds/gltf/suzanne.gltf");
 
             /* Render Loop */
@@ -53,30 +54,21 @@
                     scene.dispose();
                     let fileurl = URL.createObjectURL(e.target.files[0]);
                     scene = createScene(fileurl);
-                    uploadModel(e.target.files[0]);
+                    generateConvertedFile(e.target.files[0]);
                 }
             });
 
             let gltfModel = undefined;
 
             /* A function, that uploads the file to the server */
-            let uploadModel = (file) => {
-                let xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = () => {
-                    if(xhttp.readyState === xhttp.DONE && xhttp.status === 200) {
-                        console.log("Upload complete");
-                    }
-                };
-                xhttp.open("POST", "upload", true);
-
+            function generateConvertedFile(file) {
                 let reader = new FileReader();
                 reader.onload = (event) => {
-                    // xhttp.send(event.target.result);
                     gltfModel = JSON.parse(event.target.result);
                     convert(gltfModel);
                 };
                 reader.readAsText(file);
-            };
+            }
         </script>
     </body>
 </html>
