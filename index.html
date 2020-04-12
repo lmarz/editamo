@@ -2,7 +2,7 @@
     <head>
         <meta charset="utf-8">
         <title>editamo</title>
-        <link rel="stylesheet" type="text/css" href="cds/style/static.css">
+        <link rel="stylesheet" type="text/css" href="static.css">
     </head>
     <body>
         <!-- Babylonjs stuff for rendering -->
@@ -14,7 +14,7 @@
         <canvas id="renderCanvas" class="flex-center"></canvas>
 
         <!-- Rendering functionality -->
-        <script src="cds/js/convert.js"></script>
+        <script src="convert.js"></script>
         <script>
             let canvas = document.getElementById("renderCanvas");
             let engine = new BABYLON.Engine(canvas, true);
@@ -23,18 +23,17 @@
             function createScene(filename) {
                 let scene = new BABYLON.Scene(engine);
                 scene.createDefaultCameraOrLight(true, true, true);
-                let helper = scene.createDefaultEnvironment();
-                helper.setMainColor(new BABYLON.Color3(0.3, 0.3, 0.3))
                 BABYLON.SceneLoader.Append("", filename, scene, (scene) => {
                     console.log("Ready");
                 }, undefined, (scene, err) => {
                     console.error(err);
                 }, ".gltf");
                 scene.activeCamera.alpha += Math.PI;
+                scene.activeCamera.radius = 5;
                 return scene;
             }
 
-            let scene = createScene("cds/gltf/suzanne.gltf");
+            let scene = createScene("suzanne.gltf");
 
             /* Render Loop */
             engine.runRenderLoop(() => {
@@ -55,6 +54,8 @@
                     let fileurl = URL.createObjectURL(e.target.files[0]);
                     scene = createScene(fileurl);
                     generateConvertedFile(e.target.files[0]);
+                } else {
+                    console.error("Wrong file format. Please use embedded gltf");
                 }
             });
 
