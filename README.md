@@ -2,6 +2,10 @@
 Coversion tool from the [glTF](https://www.khronos.org/gltf/) file format to the [Animated OBJ](https://github.com/lmarz/animated_obj) file format
 
 ## How to use
+Go to [https://lmarz.github.io/editamo/index.html](https://lmarz.github.io/editamo/index.html)
+
+or
+
 1. `git clone https://github.com/lmarz/editamo`
 2. Open **index.html** in your browser
 3. Select your embedded gltf file

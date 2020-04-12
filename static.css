@@ -1,16 +1,21 @@
 * {
     margin: 0;
-    padding: 0;
+	padding: 0;
 }
 
 html, body {
     display: block;
     width: 100%;
-    height: 100%;
+	height: 100%;
+	background-color: black;
 }
 
 a {
     text-decoration: none;
+}
+
+input {
+	color: #dddddd;
 }
 
 .flex-center {
@@ -35,4 +40,17 @@ a {
 	height: 100%;
 	justify-content: space-around;
 	vertical-align: middle;
+}
+
+.error-field {
+	text-align: center;
+	background-color: #FF4839;
+	border: solid 2px #80241C;
+	margin-left: 5%;
+	margin-right: 5%;
+	margin-top: 1%;
+	margin-bottom: 1%;
+	padding-top: 0.5%;
+	padding-bottom: 0.5%;
+	color: #dddddd;
 }
