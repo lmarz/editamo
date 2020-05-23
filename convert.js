@@ -1,4 +1,4 @@
-// Selects, which file format it should convert to
+// Selects the file format it should convert to
 function convert(gltfModel) {
     if(gltfModel.animations == undefined) {
         loadForOBJ(gltfModel);
