@@ -1,85 +1,23 @@
 <html>
     <head>
-        <meta charset="utf-8">
         <title>editamo</title>
+        <meta charset="utf-8">
         <link rel="stylesheet" type="text/css" href="static.css">
     </head>
     <body>
-        <!-- Babylonjs stuff for rendering -->
-        <script src="https://cdn.babylonjs.com/babylon.js"></script>
-        <script src="https://cdn.babylonjs.com/loaders/babylon.glTFFileLoader.min.js"></script>
-
-        <!-- DOM-Elements -->
-        <div id="error"></div>
-        <input id="file" type="file">
-        <canvas id="renderCanvas" class="flex-center"></canvas>
-
-        <!-- Rendering functionality -->
         <script src="convert.js"></script>
+        <h1>editamo</h1><br>
+        <div id="message"></div>
+        <div>
+            <label for="file">Choose a File</label>
+            <input id="file" type="file" hidden>
+        </div>
+        <div id="loader"></div>
         <script>
-            let canvas = document.getElementById("renderCanvas");
-            let engine = new BABYLON.Engine(canvas, true);
-
-            /* A function that loads a model into the scene */
-            function createScene(filename) {
-                let scene = new BABYLON.Scene(engine);
-                scene.createDefaultCameraOrLight(true, true, true);
-                BABYLON.SceneLoader.Append("", filename, scene, (scene) => {
-                    console.log("Ready");
-                }, undefined, (scene, err) => {
-                    console.error(err);
-                }, ".gltf");
-                scene.activeCamera.alpha += Math.PI;
-                scene.activeCamera.radius = 5;
-                scene.clearColor = BABYLON.Color3.Black();
-                return scene;
-            }
-
-            let scene = createScene("suzanne.gltf");
-
-            /* Render Loop */
-            engine.runRenderLoop(() => {
-                scene.render();
+            let fileInput = document.getElementById("file");
+            fileInput.addEventListener("change", (e) => {
+                convert(e.target.files[0]);
             });
-
-            /* Resize Event */
-            window.addEventListener("resize", () => {
-                engine.resize();
-            });
-
-            /* Load a custom file */
-            document.getElementById("file").addEventListener("change", (e) => {
-                let filename = e.target.files[0].name
-                if(filename.split('.').pop() == "gltf") {
-                    console.log(`Loading new model ${filename}`);
-                    scene.dispose();
-                    let fileurl = URL.createObjectURL(e.target.files[0]);
-                    scene = createScene(fileurl);
-                    generateConvertedFile(e.target.files[0]);
-                } else {
-                    console.error("Wrong file format. Please use embedded gltf");
-                    let p = document.createElement("p");
-                    p.innerText = "Wrong file format. Please use embedded gltf";
-                    p.classList = ["error-field"];
-                    let err = document.getElementById("error");
-                    err.appendChild(p);
-                    setTimeout(() => {
-                        err.removeChild(p);
-                    }, 3000);
-                }
-            });
-
-            let gltfModel = undefined;
-
-            /* A function, that uploads the file to the server */
-            function generateConvertedFile(file) {
-                let reader = new FileReader();
-                reader.onload = (event) => {
-                    gltfModel = JSON.parse(event.target.result);
-                    convert(gltfModel);
-                };
-                reader.readAsText(file);
-            }
         </script>
     </body>
 </html>

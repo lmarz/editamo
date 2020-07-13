@@ -1,138 +1,121 @@
-// Selects the file format it should convert to
-function convert(gltfModel) {
-    if(gltfModel.animations == undefined) {
-        loadForOBJ(gltfModel);
-    } else {
-        loadForAMO(gltfModel);
-    }
-};
-
-// Prepares to generate the standard OBJ format
-function loadForOBJ(gltfModel) {
-    // Vertexbuffer aka v
-    let vertexBuffer = {};
-    vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
-    vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
-    vertexBuffer.count = gltfModel.accessors[vertexBuffer.accessor].count;
-    vertexBuffer.buffer = gltfModel.bufferViews[vertexBuffer.bufferView].buffer;
-    vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
-    vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
-
-    // Normalbuffer aka vn
-    let normalBuffer = {};
-    normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
-    normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
-    normalBuffer.count = gltfModel.accessors[normalBuffer.accessor].count;
-    normalBuffer.buffer = gltfModel.bufferViews[normalBuffer.bufferView].buffer;
-    normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
-    normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
-
-    // UVbuffer aka vt
-    let uvBuffer = {};
-    uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
-    uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
-    uvBuffer.count = gltfModel.accessors[uvBuffer.accessor].count;
-    uvBuffer.buffer = gltfModel.bufferViews[uvBuffer.bufferView].buffer;
-    uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
-    uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
-
-    // Indexbuffer aka f
-    let indexBuffer = {};
-    indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
-    indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
-    indexBuffer.count = gltfModel.accessors[indexBuffer.accessor].count;
-    indexBuffer.buffer = gltfModel.bufferViews[indexBuffer.bufferView].buffer;
-    indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
-    indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
-
-    // Fetch every gltfbuffer and load the data for each buffer
-    for(let i = 0; i < gltfModel.buffers.length; i++) {
-        fetch(gltfModel.buffers[i].uri).then((res) => {
-            res.arrayBuffer().then((data) => {
-                if(vertexBuffer.buffer == i) {
-                    vertexBuffer.data = new Float32Array(data.slice(vertexBuffer.start, vertexBuffer.stop));
-                }
-                if(normalBuffer.buffer == i) {
-                    normalBuffer.data = new Float32Array(data.slice(normalBuffer.start, normalBuffer.stop));
-                }
-                if(uvBuffer.buffer == i) {
-                    uvBuffer.data = new Float32Array(data.slice(uvBuffer.start, uvBuffer.stop));
-                }
-                if(indexBuffer.buffer == i) {
-                    indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
-                }
-                createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer);
-            });
-        });
+function message(type, msg, disableLoader) {
+    let p = document.createElement("p");
+    p.innerText = msg;
+    p.classList = [type];
+    let div = document.getElementById("message");
+    div.appendChild(p);
+    setTimeout(() => {
+        div.removeChild(p);
+    }, 5000);
+    if(disableLoader) {
+        document.getElementById("loader").style.display = "none";
     }
 }
 
-// Prepares to generate the Animated OBJ format
-function loadForAMO(gltfModel) {
+function convert(file) {
+    document.getElementById("loader").style.display = "inline-block";
+    if(file.name.split(".").pop() != "gltf") {
+        message("error", "Wrong file format! Use embedded gltf", true);
+        return;
+    }
+    let reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            let gltf = JSON.parse(event.target.result);
+            parse(gltf).then((data) => {
+                if(data != -1) {
+                let amo = createAMO(data.name, data.vb, data.nb, data.ub, data.ib, data.jb, data.wb, data.animation);
+                saveFile(data.name + ".amo", amo);
+                message("success", "Successfully converted to AMO", true);
+                }
+            });
+        } catch(e) {
+            if(e instanceof SyntaxError) {
+                message("error", "Invalid Syntax: " + e.message, true);
+                return;
+            } else {
+                message("error", e.message, true);
+                return;
+            }
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function parse(gltf) {
+    if(gltf.asset.version != "2.0") {
+        message("error", "Wrong gltf version", true);
+        return -1;
+    }
+    if(gltf.meshes.length != 1) {
+        message("error", "can't have more than one mesh", true);
+        return -1;
+    }
+
     // Vertexbuffer aka v
-    let vertexBuffer = {};
-    vertexBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.POSITION;
-    vertexBuffer.bufferView = gltfModel.accessors[vertexBuffer.accessor].bufferView;
-    vertexBuffer.count = gltfModel.accessors[vertexBuffer.accessor].count;
-    vertexBuffer.buffer = gltfModel.bufferViews[vertexBuffer.bufferView].buffer;
-    vertexBuffer.start = gltfModel.bufferViews[vertexBuffer.bufferView].byteOffset;
-    vertexBuffer.stop = vertexBuffer.start + gltfModel.bufferViews[vertexBuffer.bufferView].byteLength;
+    let vb_accessor = gltf.meshes[0].primitives[0].attributes.POSITION;
+    let vb_bufferView = gltf.accessors[vb_accessor].bufferView;
+    let vb_count = gltf.accessors[vb_accessor].count;
+    let vb_buffer = gltf.bufferViews[vb_bufferView].buffer;
+    let vb_start = gltf.bufferViews[vb_bufferView].byteOffset;
+    let vb_stop = vb_start + gltf.bufferViews[vb_bufferView].byteLength;
+    let vb_data = undefined;
 
     // Normalbuffer aka vn
-    let normalBuffer = {};
-    normalBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.NORMAL;
-    normalBuffer.bufferView = gltfModel.accessors[normalBuffer.accessor].bufferView;
-    normalBuffer.count = gltfModel.accessors[normalBuffer.accessor].count;
-    normalBuffer.buffer = gltfModel.bufferViews[normalBuffer.bufferView].buffer;
-    normalBuffer.start = gltfModel.bufferViews[normalBuffer.bufferView].byteOffset;
-    normalBuffer.stop = normalBuffer.start + gltfModel.bufferViews[normalBuffer.bufferView].byteLength;
+    let nb_accessor = gltf.meshes[0].primitives[0].attributes.NORMAL;
+    let nb_bufferView = gltf.accessors[nb_accessor].bufferView;
+    let nb_count = gltf.accessors[nb_accessor].count;
+    let nb_buffer = gltf.bufferViews[nb_bufferView].buffer;
+    let nb_start = gltf.bufferViews[nb_bufferView].byteOffset;
+    let nb_stop = nb_start + gltf.bufferViews[nb_bufferView].byteLength;
+    let nb_data = undefined;
 
     // UVbuffer aka vt
-    let uvBuffer = {};
-    uvBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.TEXCOORD_0;
-    uvBuffer.bufferView = gltfModel.accessors[uvBuffer.accessor].bufferView;
-    uvBuffer.count = gltfModel.accessors[uvBuffer.accessor].count;
-    uvBuffer.buffer = gltfModel.bufferViews[uvBuffer.bufferView].buffer;
-    uvBuffer.start = gltfModel.bufferViews[uvBuffer.bufferView].byteOffset;
-    uvBuffer.stop = uvBuffer.start + gltfModel.bufferViews[uvBuffer.bufferView].byteLength;
+    let ub_accessor = gltf.meshes[0].primitives[0].attributes.TEXCOORD_0;
+    let ub_bufferView = gltf.accessors[ub_accessor].bufferView;
+    let ub_count = gltf.accessors[ub_accessor].count;
+    let ub_buffer = gltf.bufferViews[ub_bufferView].buffer;
+    let ub_start = gltf.bufferViews[ub_bufferView].byteOffset;
+    let ub_stop = ub_start + gltf.bufferViews[ub_bufferView].byteLength;
+    let ub_data = undefined;
 
     // Indexbuffer aka f
-    let indexBuffer = {};
-    indexBuffer.accessor = gltfModel.meshes[0].primitives[0].indices;
-    indexBuffer.bufferView = gltfModel.accessors[indexBuffer.accessor].bufferView;
-    indexBuffer.count = gltfModel.accessors[indexBuffer.accessor].count;
-    indexBuffer.buffer = gltfModel.bufferViews[indexBuffer.bufferView].buffer;
-    indexBuffer.start = gltfModel.bufferViews[indexBuffer.bufferView].byteOffset;
-    indexBuffer.stop = indexBuffer.start + gltfModel.bufferViews[indexBuffer.bufferView].byteLength;
+    let ib_accessor = gltf.meshes[0].primitives[0].indices;
+    let ib_bufferView = gltf.accessors[ib_accessor].bufferView;
+    let ib_count = gltf.accessors[ib_accessor].count;
+    let ib_buffer = gltf.bufferViews[ib_bufferView].buffer;
+    let ib_start = gltf.bufferViews[ib_bufferView].byteOffset;
+    let ib_stop = ib_start + gltf.bufferViews[ib_bufferView].byteLength;
+    let ib_data = undefined;
 
     // Jointbuffer aka vj
-    let jointBuffer = {};
-    jointBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.JOINTS_0;
-    jointBuffer.bufferView = gltfModel.accessors[jointBuffer.accessor].bufferView;
-    jointBuffer.count = gltfModel.accessors[jointBuffer.accessor].count;
-    jointBuffer.buffer = gltfModel.bufferViews[jointBuffer.bufferView].buffer;
-    jointBuffer.start = gltfModel.bufferViews[jointBuffer.bufferView].byteOffset;
-    jointBuffer.stop = jointBuffer.start + gltfModel.bufferViews[jointBuffer.bufferView].byteLength;
+    let jb_accessor = gltf.meshes[0].primitives[0].attributes.JOINTS_0;
+    let jb_bufferView = gltf.accessors[jb_accessor].bufferView;
+    let jb_count = gltf.accessors[jb_accessor].count;
+    let jb_buffer = gltf.bufferViews[jb_bufferView].buffer;
+    let jb_start = gltf.bufferViews[jb_bufferView].byteOffset;
+    let jb_stop = jb_start + gltf.bufferViews[jb_bufferView].byteLength;
+    let jb_data = undefined;
 
     // Weightbuffer aka vw
-    let weightBuffer = {};
-    weightBuffer.accessor = gltfModel.meshes[0].primitives[0].attributes.WEIGHTS_0;
-    weightBuffer.bufferView = gltfModel.accessors[weightBuffer.accessor].bufferView;
-    weightBuffer.count = gltfModel.accessors[weightBuffer.accessor].count;
-    weightBuffer.buffer = gltfModel.bufferViews[weightBuffer.bufferView].buffer;
-    weightBuffer.start = gltfModel.bufferViews[weightBuffer.bufferView].byteOffset;
-    weightBuffer.stop = weightBuffer.start + gltfModel.bufferViews[weightBuffer.bufferView].byteLength;
+    let wb_accessor = gltf.meshes[0].primitives[0].attributes.WEIGHTS_0;
+    let wb_bufferView = gltf.accessors[wb_accessor].bufferView;
+    let wb_count = gltf.accessors[wb_accessor].count;
+    let wb_buffer = gltf.bufferViews[wb_bufferView].buffer;
+    let wb_start = gltf.bufferViews[wb_bufferView].byteOffset;
+    let wb_stop = wb_start + gltf.bufferViews[wb_bufferView].byteLength;
+    let wb_data = undefined;
 
-    // THe animation object
+    // The animation object
     let animation = {};
-    animation.name = gltfModel.animations[0].name;
+    animation.name = gltf.animations[0].name;
     animation.joints = [];
-    // Load every joint and sleect their parents
-    for(let i = 0; i < gltfModel.skins[0].joints.length; i++) {
+    // Load every joint and select their parents
+    for(let i = 0; i < gltf.skins[0].joints.length; i++) {
         animation.joints[i] = {};
-        animation.joints[i].index = gltfModel.skins[0].joints[i];
-        animation.joints[i].name = gltfModel.nodes[animation.joints[i].index].name;
-        animation.joints[i].children = gltfModel.nodes[animation.joints[i].index].children;
+        animation.joints[i].index = gltf.skins[0].joints[i];
+        animation.joints[i].name = gltf.nodes[animation.joints[i].index].name;
+        animation.joints[i].children = gltf.nodes[animation.joints[i].index].children;
         if(animation.joints[i].children != undefined) {
             for(let j = 0; j < animation.joints[i].children.length; j++) {
                 animation.joints[animation.joints[i].children[j]].parent = i; 
@@ -141,149 +124,130 @@ function loadForAMO(gltfModel) {
     }
     // The animation samplers, which contains to buffers: the timestamps and the values the attribute should have at that timestamp
     animation.samplers = [];
-    for(let i = 0; i < gltfModel.animations[0].samplers.length; i++) {
+    for(let i = 0; i < gltf.animations[0].samplers.length; i++) {
         animation.samplers[i] = {};
         animation.samplers[i].timeBuffer = {};
-        animation.samplers[i].timeBuffer.accessor = gltfModel.animations[0].samplers[i].input;
-        animation.samplers[i].timeBuffer.bufferView = gltfModel.accessors[animation.samplers[i].timeBuffer.accessor].bufferView;
-        animation.samplers[i].timeBuffer.count = gltfModel.accessors[animation.samplers[i].timeBuffer.accessor].count;
-        animation.samplers[i].timeBuffer.buffer = gltfModel.bufferViews[animation.samplers[i].timeBuffer.bufferView].buffer;
-        animation.samplers[i].timeBuffer.start = gltfModel.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteOffset;
-        animation.samplers[i].timeBuffer.stop = animation.samplers[i].timeBuffer.start + gltfModel.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteLength;
+        animation.samplers[i].timeBuffer.accessor = gltf.animations[0].samplers[i].input;
+        animation.samplers[i].timeBuffer.bufferView = gltf.accessors[animation.samplers[i].timeBuffer.accessor].bufferView;
+        animation.samplers[i].timeBuffer.count = gltf.accessors[animation.samplers[i].timeBuffer.accessor].count;
+        animation.samplers[i].timeBuffer.buffer = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].buffer;
+        animation.samplers[i].timeBuffer.start = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteOffset;
+        animation.samplers[i].timeBuffer.stop = animation.samplers[i].timeBuffer.start + gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteLength;
+        animation.samplers[i].timeBuffer.data = undefined;
 
         animation.samplers[i].valueBuffer = {};
-        animation.samplers[i].valueBuffer.accessor = gltfModel.animations[0].samplers[i].output;
-        animation.samplers[i].valueBuffer.bufferView = gltfModel.accessors[animation.samplers[i].valueBuffer.accessor].bufferView;
-        animation.samplers[i].valueBuffer.count = gltfModel.accessors[animation.samplers[i].valueBuffer.accessor].count;
-        animation.samplers[i].valueBuffer.buffer = gltfModel.bufferViews[animation.samplers[i].valueBuffer.bufferView].buffer;
-        animation.samplers[i].valueBuffer.start = gltfModel.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteOffset;
-        animation.samplers[i].valueBuffer.stop = animation.samplers[i].valueBuffer.start + gltfModel.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteLength;
+        animation.samplers[i].valueBuffer.accessor = gltf.animations[0].samplers[i].output;
+        animation.samplers[i].valueBuffer.bufferView = gltf.accessors[animation.samplers[i].valueBuffer.accessor].bufferView;
+        animation.samplers[i].valueBuffer.count = gltf.accessors[animation.samplers[i].valueBuffer.accessor].count;
+        animation.samplers[i].valueBuffer.buffer = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].buffer;
+        animation.samplers[i].valueBuffer.start = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteOffset;
+        animation.samplers[i].valueBuffer.stop = animation.samplers[i].valueBuffer.start + gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteLength;
+        animation.samplers[i].valueBuffer.data = undefined;
     }
     // The animation channels. They determine, which attribute of which joint should be used for the sampler
     animation.channels = [];
-    for(let i = 0; i < gltfModel.animations[0].channels.length; i++) {
+    for(let i = 0; i < gltf.animations[0].channels.length; i++) {
         animation.channels[i] = {};
-        animation.channels[i].joint = gltfModel.animations[0].channels[i].target.node;
-        animation.channels[i].sampler = gltfModel.animations[0].channels[i].sampler;
-        animation.channels[i].path = gltfModel.animations[0].channels[i].target.path;
+        animation.channels[i].joint = gltf.animations[0].channels[i].target.node;
+        animation.channels[i].sampler = gltf.animations[0].channels[i].sampler;
+        animation.channels[i].path = gltf.animations[0].channels[i].target.path;
     }
-
     // Fetch every gltfbuffer and load the data for each buffer
-    for(let i = 0; i < gltfModel.buffers.length; i++) {
-        fetch(gltfModel.buffers[i].uri).then((res) => {
-            res.arrayBuffer().then((data) => {
-                if(vertexBuffer.buffer == i) {
-                    vertexBuffer.data = new Float32Array(data.slice(vertexBuffer.start, vertexBuffer.stop));
+    for(let i = 0; i < gltf.buffers.length; i++) {
+        let res = await fetch(gltf.buffers[i].uri);
+        let data = await res.arrayBuffer();
+        if(vb_buffer == i) {
+            vb_data = new Float32Array(data.slice(vb_start, vb_stop));
+        }
+        if(nb_buffer == i) {
+            nb_data = new Float32Array(data.slice(nb_start, nb_stop));
+        }
+        if(ub_buffer == i) {
+            ub_data = new Float32Array(data.slice(ub_start, ub_stop));
+        }
+        if(ib_buffer == i) {
+            ib_data = new Uint16Array(data.slice(ib_start, ib_stop));
+        }
+        if(jb_buffer == i) {
+            if(gltf.accessors[jb_accessor].componentType == 5121) {
+                jb_data = new Uint8Array(data.slice(jb_start, jb_stop));
+            } else {
+                jb_data = new Uint16Array(data.slice(jb_start, jb_stop));
+            }
+        }
+        if(wb_buffer == i) {
+            wb_data = new Float32Array(data.slice(wb_start, wb_stop));
+        }
+        for(let j = 0; j < animation.samplers.length; j++) {
+            if(animation.samplers[j].timeBuffer.buffer == i) {
+                animation.samplers[j].timeBuffer.data = new Float32Array(data.slice(animation.samplers[j].timeBuffer.start, animation.samplers[j].timeBuffer.stop));
+            }
+            if(animation.samplers[j].valueBuffer.buffer == i) {
+                if(gltf.accessors[animation.samplers[j].valueBuffer.accessor].componentType == 5126) {
+                    animation.samplers[j].valueBuffer.data = new Float32Array(data.slice(animation.samplers[j].valueBuffer.start, animation.samplers[j].valueBuffer.stop));
                 }
-                if(normalBuffer.buffer == i) {
-                    normalBuffer.data = new Float32Array(data.slice(normalBuffer.start, normalBuffer.stop));
-                }
-                if(uvBuffer.buffer == i) {
-                    uvBuffer.data = new Float32Array(data.slice(uvBuffer.start, uvBuffer.stop));
-                }
-                if(indexBuffer.buffer == i) {
-                    indexBuffer.data = new Uint16Array(data.slice(indexBuffer.start, indexBuffer.stop));
-                }
-                if(jointBuffer.buffer == i) {
-                    if(gltfModel.accessors[jointBuffer.accessor].componentType == 5121) {
-                        jointBuffer.data = new Uint8Array(data.slice(jointBuffer.start, jointBuffer.stop));
-                    } else {
-                        jointBuffer.data = new Uint16Array(data.slice(jointBuffer.start, jointBuffer.stop));
-                    }
-                }
-                if(weightBuffer.buffer == i) {
-                    weightBuffer.data = new Float32Array(data.slice(weightBuffer.start, weightBuffer.stop));
-                }
-                for(let j = 0; j < animation.samplers.length; j++) {
-                    if(animation.samplers[j].timeBuffer.buffer == i) {
-                        animation.samplers[j].timeBuffer.data = new Float32Array(data.slice(animation.samplers[j].timeBuffer.start, animation.samplers[j].timeBuffer.stop));
-                    }
-                    if(animation.samplers[j].valueBuffer.buffer == i) {
-                        if(gltfModel.accessors[animation.samplers[j].valueBuffer.accessor].componentType == 5126) {
-                            animation.samplers[j].valueBuffer.data = new Float32Array(data.slice(animation.samplers[j].valueBuffer.start, animation.samplers[j].valueBuffer.stop));
-                        }
-                    }
-                }
-                createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer, animation);
-            });
-        });
+            }
+        }
     }
+    let vb = {"data": vb_data, "count": vb_count};
+    let nb = {"data": nb_data, "count": nb_count};
+    let ub = {"data": ub_data, "count": ub_count};
+    let ib = {"data": ib_data, "count": ib_count};
+    let jb = {"data": jb_data, "count": jb_count};
+    let wb = {"data": wb_data, "count": wb_count};
+    let data = { "name": gltf.meshes[0].name,
+    "vb": vb,
+    "nb": nb,
+    "ub": ub,
+    "ib": ib,
+    "jb": jb,
+    "wb": wb,
+    "animation": animation
+   };
+    return data;
 }
 
-// Generate the standard OBJ file baesd on the buffers we previously determined
-function createOBJ(gltfModel, vertexBuffer, normalBuffer, uvBuffer, indexBuffer) {
-    // Header
-    let OBJ = "#Generated by editamo\n";
-    OBJ += `o ${gltfModel.meshes[0].name}\n\n`;
-
-    // Vertexbuffer aka v
-    for(let i = 0; i < vertexBuffer.count; i++) {
-        OBJ += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
-    }
-    OBJ += "\n";
-
-    // Normalbuffer aka vn
-    for(let i = 0; i < normalBuffer.count; i++) {
-        OBJ += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
-    }
-    OBJ += "\n";
-
-    // UVbuffer aka vt
-    for(let i = 0; i < uvBuffer.count; i++) {
-        OBJ += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
-    }
-    OBJ += "\n";
-
-    // Indexbuffer aka f
-    for(let i = 0; i < indexBuffer.count/3; i++) {
-        OBJ += `f ${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1} `
-        OBJ += `${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1} `
-        OBJ += `${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}\n`;
-    }
-    saveFile(OBJ, gltfModel.meshes[0].name + ".obj");
-}
-
-// Generate the AMO file based on the buffers we  previously determined
-function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer, weightBuffer, indexBuffer, animation) {
+// Generate the AMO file based on the buffers the parser previously determined
+function createAMO(name, vb, nb, ub, ib, jb, wb, animation) {
     // Header
     let AMO = "#Generated by editamo\n";
-    AMO += `ao ${gltfModel.meshes[0].name}\n\n`;
+    AMO += `ao ${name}\n\n`;
 
     // Vertexbuffer aka v
-    for(let i = 0; i < vertexBuffer.count; i++) {
-        AMO += `v ${vertexBuffer.data[i*3]} ${vertexBuffer.data[i*3+1]} ${vertexBuffer.data[i*3+2]}\n`;
+    for(let i = 0; i < vb.count; i++) {
+        AMO += `v ${vb.data[i*3]} ${vb.data[i*3+1]} ${vb.data[i*3+2]}\n`;
     }
     AMO += "\n";
 
     // Normalbuffer aka vn
-    for(let i = 0; i < normalBuffer.count; i++) {
-        AMO += `vn ${normalBuffer.data[i*3]} ${normalBuffer.data[i*3+1]} ${normalBuffer.data[i*3+2]}\n`
+    for(let i = 0; i < nb.count; i++) {
+        AMO += `vn ${nb.data[i*3]} ${nb.data[i*3+1]} ${nb.data[i*3+2]}\n`;
     }
     AMO += "\n";
 
     // UVbuffer aka vt
-    for(let i = 0; i < uvBuffer.count; i++) {
-        AMO += `vt ${uvBuffer.data[i*2]} ${uvBuffer.data[i*2+1]}\n`;
+    for(let i = 0; i < ub.count; i++) {
+        AMO += `vt ${ub.data[i*2]} ${ub.data[i*2+1]}\n`;
     }
     AMO += "\n";
 
     // Jointbuffer aka vj
-    for(let i = 0; i < jointBuffer.count; i++) {
-        AMO += `vj ${jointBuffer.data[i*4]+1} ${jointBuffer.data[i*4+1]+1} ${jointBuffer.data[i*4+2]+1} ${jointBuffer.data[i*4+3]+1}\n`;
+    for(let i = 0; i < jb.count; i++) {
+        AMO += `vj ${jb.data[i*4]+1} ${jb.data[i*4+1]+1} ${jb.data[i*4+2]+1} ${jb.data[i*4+3]+1}\n`;
     }
     AMO += "\n";
 
     // Weightbuffer aka vw
-    for(let i = 0; i < weightBuffer.count; i++) {
-        AMO += `vw ${weightBuffer.data[i*4]} ${weightBuffer.data[i*4+1]} ${weightBuffer.data[i*4+2]} ${weightBuffer.data[i*4+3]}\n`;
+    for(let i = 0; i < wb.count; i++) {
+        AMO += `vw ${wb.data[i*4]} ${wb.data[i*4+1]} ${wb.data[i*4+2]} ${wb.data[i*4+3]}\n`;
     }
     AMO += "\n";
 
     // Indexbuffer aka f
-    for(let i = 0; i < indexBuffer.count/3; i++) {
-        AMO += `f ${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1}/${indexBuffer.data[i*3]+1} `
-        AMO += `${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1}/${indexBuffer.data[i*3+1]+1} `
-        AMO += `${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}/${indexBuffer.data[i*3+2]+1}\n`;
+    for(let i = 0; i < ib.count/3; i++) {
+        AMO += `f ${ib.data[i*3]+1}/${ib.data[i*3]+1}/${ib.data[i*3]+1}/${ib.data[i*3]+1}/${ib.data[i*3]+1} `;
+        AMO += `${ib.data[i*3+1]+1}/${ib.data[i*3+1]+1}/${ib.data[i*3+1]+1}/${ib.data[i*3+1]+1}/${ib.data[i*3+1]+1} `;
+        AMO += `${ib.data[i*3+2]+1}/${ib.data[i*3+2]+1}/${ib.data[i*3+2]+1}/${ib.data[i*3+2]+1}/${ib.data[i*3+2]+1}\n`;
     }
     AMO += "\n";
 
@@ -311,10 +275,11 @@ function createAMO(gltfModel, vertexBuffer, normalBuffer, uvBuffer, jointBuffer,
             }
         }
     }
-    saveFile(AMO, gltfModel.meshes[0].name + ".amo");
+
+    return AMO;
 }
 
-function saveFile(content, filename) {
+function saveFile(filename, content) {
     let file = new Blob([content], {type: "text/plain"});
     let a = document.createElement("a");
     let url = URL.createObjectURL(file);
