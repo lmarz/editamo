@@ -50,6 +50,15 @@ label[for=file]:hover {
     margin-bottom: 1%;
 }
 
+.warning {
+    display: inline-block;
+    background-color: yellow;
+    width: 30%;
+    padding: 1% 2%;
+    border-radius: 3px;
+    margin-bottom: 1%;
+}
+
 .success {
     display: inline-block;
     background-color: green;

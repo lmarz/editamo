@@ -109,48 +109,52 @@ async function parse(gltf) {
     // The animation object
     let animation = {};
     animation.name = gltf.animations[0].name;
-    animation.joints = [];
-    // Load every joint and select their parents
-    for(let i = 0; i < gltf.skins[0].joints.length; i++) {
-        animation.joints[i] = {};
-        animation.joints[i].index = gltf.skins[0].joints[i];
-        animation.joints[i].name = gltf.nodes[animation.joints[i].index].name;
-        animation.joints[i].children = gltf.nodes[animation.joints[i].index].children;
-        if(animation.joints[i].children != undefined) {
-            for(let j = 0; j < animation.joints[i].children.length; j++) {
-                animation.joints[animation.joints[i].children[j]].parent = i; 
+    if(animation.name == undefined) {
+        message("warning", "Animation not found", false);
+    } else {
+        animation.joints = [];
+        // Load every joint and select their parents
+        for(let i = 0; i < gltf.skins[0].joints.length; i++) {
+            animation.joints[i] = {};
+            animation.joints[i].index = gltf.skins[0].joints[i];
+            animation.joints[i].name = gltf.nodes[animation.joints[i].index].name;
+            animation.joints[i].children = gltf.nodes[animation.joints[i].index].children;
+            if(animation.joints[i].children != undefined) {
+                for(let j = 0; j < animation.joints[i].children.length; j++) {
+                    animation.joints[animation.joints[i].children[j]].parent = i; 
+                }
             }
         }
-    }
-    // The animation samplers, which contains to buffers: the timestamps and the values the attribute should have at that timestamp
-    animation.samplers = [];
-    for(let i = 0; i < gltf.animations[0].samplers.length; i++) {
-        animation.samplers[i] = {};
-        animation.samplers[i].timeBuffer = {};
-        animation.samplers[i].timeBuffer.accessor = gltf.animations[0].samplers[i].input;
-        animation.samplers[i].timeBuffer.bufferView = gltf.accessors[animation.samplers[i].timeBuffer.accessor].bufferView;
-        animation.samplers[i].timeBuffer.count = gltf.accessors[animation.samplers[i].timeBuffer.accessor].count;
-        animation.samplers[i].timeBuffer.buffer = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].buffer;
-        animation.samplers[i].timeBuffer.start = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteOffset;
-        animation.samplers[i].timeBuffer.stop = animation.samplers[i].timeBuffer.start + gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteLength;
-        animation.samplers[i].timeBuffer.data = undefined;
-
-        animation.samplers[i].valueBuffer = {};
-        animation.samplers[i].valueBuffer.accessor = gltf.animations[0].samplers[i].output;
-        animation.samplers[i].valueBuffer.bufferView = gltf.accessors[animation.samplers[i].valueBuffer.accessor].bufferView;
-        animation.samplers[i].valueBuffer.count = gltf.accessors[animation.samplers[i].valueBuffer.accessor].count;
-        animation.samplers[i].valueBuffer.buffer = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].buffer;
-        animation.samplers[i].valueBuffer.start = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteOffset;
-        animation.samplers[i].valueBuffer.stop = animation.samplers[i].valueBuffer.start + gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteLength;
-        animation.samplers[i].valueBuffer.data = undefined;
-    }
-    // The animation channels. They determine, which attribute of which joint should be used for the sampler
-    animation.channels = [];
-    for(let i = 0; i < gltf.animations[0].channels.length; i++) {
-        animation.channels[i] = {};
-        animation.channels[i].joint = gltf.animations[0].channels[i].target.node;
-        animation.channels[i].sampler = gltf.animations[0].channels[i].sampler;
-        animation.channels[i].path = gltf.animations[0].channels[i].target.path;
+        // The animation samplers, which contains to buffers: the timestamps and the values the attribute should have at that timestamp
+        animation.samplers = [];
+        for(let i = 0; i < gltf.animations[0].samplers.length; i++) {
+            animation.samplers[i] = {};
+            animation.samplers[i].timeBuffer = {};
+            animation.samplers[i].timeBuffer.accessor = gltf.animations[0].samplers[i].input;
+            animation.samplers[i].timeBuffer.bufferView = gltf.accessors[animation.samplers[i].timeBuffer.accessor].bufferView;
+            animation.samplers[i].timeBuffer.count = gltf.accessors[animation.samplers[i].timeBuffer.accessor].count;
+            animation.samplers[i].timeBuffer.buffer = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].buffer;
+            animation.samplers[i].timeBuffer.start = gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteOffset;
+            animation.samplers[i].timeBuffer.stop = animation.samplers[i].timeBuffer.start + gltf.bufferViews[animation.samplers[i].timeBuffer.bufferView].byteLength;
+            animation.samplers[i].timeBuffer.data = undefined;
+    
+            animation.samplers[i].valueBuffer = {};
+            animation.samplers[i].valueBuffer.accessor = gltf.animations[0].samplers[i].output;
+            animation.samplers[i].valueBuffer.bufferView = gltf.accessors[animation.samplers[i].valueBuffer.accessor].bufferView;
+            animation.samplers[i].valueBuffer.count = gltf.accessors[animation.samplers[i].valueBuffer.accessor].count;
+            animation.samplers[i].valueBuffer.buffer = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].buffer;
+            animation.samplers[i].valueBuffer.start = gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteOffset;
+            animation.samplers[i].valueBuffer.stop = animation.samplers[i].valueBuffer.start + gltf.bufferViews[animation.samplers[i].valueBuffer.bufferView].byteLength;
+            animation.samplers[i].valueBuffer.data = undefined;
+        }
+        // The animation channels. They determine, which attribute of which joint should be used for the sampler
+        animation.channels = [];
+        for(let i = 0; i < gltf.animations[0].channels.length; i++) {
+            animation.channels[i] = {};
+            animation.channels[i].joint = gltf.animations[0].channels[i].target.node;
+            animation.channels[i].sampler = gltf.animations[0].channels[i].sampler;
+            animation.channels[i].path = gltf.animations[0].channels[i].target.path;
+        }
     }
     // Fetch every gltfbuffer and load the data for each buffer
     for(let i = 0; i < gltf.buffers.length; i++) {
@@ -178,13 +182,15 @@ async function parse(gltf) {
         if(wb_buffer == i) {
             wb_data = new Float32Array(data.slice(wb_start, wb_stop));
         }
-        for(let j = 0; j < animation.samplers.length; j++) {
-            if(animation.samplers[j].timeBuffer.buffer == i) {
-                animation.samplers[j].timeBuffer.data = new Float32Array(data.slice(animation.samplers[j].timeBuffer.start, animation.samplers[j].timeBuffer.stop));
-            }
-            if(animation.samplers[j].valueBuffer.buffer == i) {
-                if(gltf.accessors[animation.samplers[j].valueBuffer.accessor].componentType == 5126) {
-                    animation.samplers[j].valueBuffer.data = new Float32Array(data.slice(animation.samplers[j].valueBuffer.start, animation.samplers[j].valueBuffer.stop));
+        if(animation.name != undefined) {
+            for(let j = 0; j < animation.samplers.length; j++) {
+                if(animation.samplers[j].timeBuffer.buffer == i) {
+                    animation.samplers[j].timeBuffer.data = new Float32Array(data.slice(animation.samplers[j].timeBuffer.start, animation.samplers[j].timeBuffer.stop));
+                }
+                if(animation.samplers[j].valueBuffer.buffer == i) {
+                    if(gltf.accessors[animation.samplers[j].valueBuffer.accessor].componentType == 5126) {
+                        animation.samplers[j].valueBuffer.data = new Float32Array(data.slice(animation.samplers[j].valueBuffer.start, animation.samplers[j].valueBuffer.stop));
+                    }
                 }
             }
         }
@@ -262,20 +268,21 @@ function createAMO(name, vb, nb, ub, ib, jb, wb, animation) {
     AMO += "\n";
 
     // Animation
-    AMO += `a ${animation.name}\n\n`;
-    for(let i = 0; i < animation.channels.length; i++) {
-        let sampler = animation.samplers[animation.channels[i].sampler];
-        for(let j = 0; j < sampler.timeBuffer.count; j++) {
-            // Position aka ap
-            if(animation.channels[i].path == "translation") {
-                AMO += `ap ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*3]} ${sampler.valueBuffer.data[j*3+1]} ${sampler.valueBuffer.data[j*3+2]}\n`;
-            // Rotation aka ar
-            } else if(animation.channels[i].path == "rotation") {
-                AMO += `ar ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*4]} ${sampler.valueBuffer.data[j*4+1]} ${sampler.valueBuffer.data[j*4+2]} ${sampler.valueBuffer.data[j*4+3]}\n`;
+    if(animation.name != undefined) {
+        AMO += `a ${animation.name}\n\n`;
+        for(let i = 0; i < animation.channels.length; i++) {
+            let sampler = animation.samplers[animation.channels[i].sampler];
+            for(let j = 0; j < sampler.timeBuffer.count; j++) {
+                // Position aka ap
+                if(animation.channels[i].path == "translation") {
+                    AMO += `ap ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*3]} ${sampler.valueBuffer.data[j*3+1]} ${sampler.valueBuffer.data[j*3+2]}\n`;
+                // Rotation aka ar
+                } else if(animation.channels[i].path == "rotation") {
+                    AMO += `ar ${sampler.timeBuffer.data[j]} ${animation.channels[i].joint+1} ${sampler.valueBuffer.data[j*4]} ${sampler.valueBuffer.data[j*4+1]} ${sampler.valueBuffer.data[j*4+2]} ${sampler.valueBuffer.data[j*4+3]}\n`;
+                }
             }
         }
     }
-
     return AMO;
 }
 
